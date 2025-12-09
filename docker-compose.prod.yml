@@ -1,0 +1,159 @@
+# ============================================
+# Docker Compose cho Production
+# Domain: ai.quanghungubqn0310.id.vn
+# ============================================
+# Chạy với: docker-compose -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Frontend - React + Nginx
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # Chỉ build stage production (bỏ qua development stage nếu có)
+      target: production
+    # Port 80 cho HTTP
+    # Nếu có SSL, sẽ cần thêm port 443
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    # KHÔNG có volumes trong production
+    # Lý do: Muốn dùng code đã build, không mount từ host
+    restart: unless-stopped
+    # Giới hạn tài nguyên để tránh service chiếm hết RAM
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - mdms-network
+
+  # ============================================
+  # Backend - FastAPI + Uvicorn
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    # Không expose port ra ngoài
+    # Frontend nginx sẽ proxy tới backend qua internal network
+    # Bảo mật hơn vì backend không accessible từ internet
+    expose:
+      - "8000"
+    environment:
+      # Database connection - dùng service name "db"
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/mdms
+      # Redis connection
+      - REDIS_URL=redis://redis:6379/0
+      # API Keys từ .env file
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # AWS S3 (nếu cần)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      # JWT Secret cho authentication
+      - SECRET_KEY=${SECRET_KEY}
+      # Production mode
+      - ENVIRONMENT=production
+    depends_on:
+      db:
+        # Chờ db healthy mới start backend
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    networks:
+      - mdms-network
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # PostgreSQL với pgvector
+  # ============================================
+  db:
+    image: pgvector/pgvector:pg16
+    # KHÔNG expose port ra ngoài trong production
+    # Chỉ internal services mới access được
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_USER: postgres
+      # Password từ .env file (QUAN TRỌNG: không hardcode!)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: mdms
+    volumes:
+      # Persistent volume cho data
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - mdms-network
+    # Health check để biết khi nào DB sẵn sàng
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis - Caching & Job Queue
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - mdms-network
+    # Bật persistence để không mất data khi restart
+    command: redis-server --appendonly yes
+
+# ============================================
+# Volumes - Persistent Storage
+# ============================================
+volumes:
+  postgres_data:
+    # Named volume - Docker quản lý
+    # Data sẽ persist qua các lần restart/rebuild
+  redis_data:
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  mdms-network:
+    driver: bridge
+    # Internal network giúp các service communicate
+    # mà không expose ra internet

@@ -1,0 +1,80 @@
+# ============================================
+# .dockerignore cho Frontend
+# ============================================
+# QUAN TRỌNG: node_modules rất lớn (~500MB)
+# Không copy vào Docker, sẽ npm install fresh trong container
+
+# ============================================
+# Dependencies
+# ============================================
+# CRITICAL: Không copy node_modules!
+# - Quá lớn (500MB+)
+# - Có thể có native modules không tương thích với Alpine Linux
+# - npm ci trong Docker sẽ cài lại đúng version
+node_modules/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ============================================
+# Build output
+# ============================================
+# Không cần copy dist vì sẽ build trong Docker
+dist/
+build/
+
+# ============================================
+# IDE & Editor
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ============================================
+# Environment & Secrets
+# ============================================
+.env
+.env.*
+!.env.example
+
+# ============================================
+# Git
+# ============================================
+.git/
+.gitignore
+
+# ============================================
+# Docker
+# ============================================
+Dockerfile
+.dockerignore
+
+# ============================================
+# Testing
+# ============================================
+coverage/
+.nyc_output/
+
+# ============================================
+# Logs & Temp
+# ============================================
+*.log
+logs/
+tmp/
+
+# ============================================
+# OS files
+# ============================================
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Documentation (không cần trong production)
+# ============================================
+*.md
+!README.md
