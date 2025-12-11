@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_BASE_URL = '/api/v1'
+// Sử dụng biến môi trường hoặc fallback về relative path (cho nginx proxy)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -141,7 +142,7 @@ export const generateApi = {
   },
   download: async (jobId: string, format: string) => {
     const token = localStorage.getItem('token')
-    const response = await fetch(`/api/v1/generate/${jobId}/download?format=${format}`, {
+    const response = await fetch(`${API_BASE_URL}/generate/${jobId}/download?format=${format}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

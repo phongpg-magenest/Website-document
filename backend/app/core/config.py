@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = ""  # Custom base URL for proxy (e.g., https://gemini-proxy.izysync.com)
 
+    # Embedding Model
+    EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
     # JWT
     JWT_SECRET_KEY: str = "your-jwt-secret-key"
     JWT_ALGORITHM: str = "HS256"
