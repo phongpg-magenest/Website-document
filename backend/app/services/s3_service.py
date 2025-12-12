@@ -13,7 +13,8 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # Thư mục lưu file local
-UPLOAD_DIR = Path("/app/uploads")
+# Use environment variable or default to ./uploads for local dev
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", Path(__file__).parent.parent.parent / "uploads"))
 
 
 class S3Service:
