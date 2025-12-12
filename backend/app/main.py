@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 async def create_default_admin():
-    """Create default admin user if not exists"""
+    """Create or update default admin user"""
     async with AsyncSessionLocal() as db:
         # Check if admin exists
         result = await db.execute(
@@ -38,7 +38,10 @@ async def create_default_admin():
             await db.commit()
             logger.info("Default admin user created: admin@mdms.local / admin123")
         else:
-            logger.info("Default admin user already exists")
+            # Reset password to ensure it works
+            existing_user.hashed_password = get_password_hash("admin123")
+            await db.commit()
+            logger.info("Default admin user password reset: admin@mdms.local / admin123")
 
 
 @asynccontextmanager
