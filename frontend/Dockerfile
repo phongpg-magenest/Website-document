@@ -25,6 +25,11 @@ RUN npm ci --ignore-scripts
 # Docker dùng cache của npm ci -> build nhanh hơn nhiều
 COPY . .
 
+# Build arguments cho Vite
+# Railway sẽ truyền VITE_API_URL vào lúc build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build production bundle
 # Kết quả: folder /app/dist chứa static files (HTML, JS, CSS)
 # Vite tự động minify, tree-shake, code-split
