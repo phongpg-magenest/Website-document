@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/mdms"
     DATABASE_POOL_SIZE: int = 10
 
+    @property
+    def async_database_url(self) -> str:
+        """Convert DATABASE_URL to async format for SQLAlchemy"""
+        url = self.DATABASE_URL
+        # Railway provides postgresql:// but we need postgresql+asyncpg://
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        return url
+
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
