@@ -24,12 +24,8 @@ class Settings(BaseSettings):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
-        # Also handle case where it might already have +psycopg2 or similar
         elif "postgresql+psycopg2://" in url:
             url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
-        # If already asyncpg, keep as is
-        print(f"[DEBUG] Original DATABASE_URL: {self.DATABASE_URL[:50]}...")
-        print(f"[DEBUG] Converted async_database_url: {url[:50]}...")
         return url
 
     # Redis
