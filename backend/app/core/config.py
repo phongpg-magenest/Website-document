@@ -73,7 +73,12 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = ".doc,.docx,.xls,.xlsx,.pdf,.md"
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://serene-strength-production.up.railway.app",
+        "https://website-document-production.up.railway.app",
+    ]
 
     @property
     def max_file_size_bytes(self) -> int:
