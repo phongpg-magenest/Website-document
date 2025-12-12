@@ -3,139 +3,130 @@
 Hệ thống quản lý và tra cứu tài liệu nội bộ với các tính năng:
 - **Semantic Search**: Tìm kiếm ngữ nghĩa trên toàn bộ tài liệu đã upload
 - **Document Generation**: Tự động sinh tài liệu từ input của user (SRS, PRD, etc.)
+- **Version Control**: Quản lý phiên bản tài liệu
+- **Approval Workflow**: Quy trình phê duyệt tài liệu
+- **Collaboration**: Bình luận và cộng tác trên tài liệu
+- **Prompt Manager**: Quản lý prompt templates cho AI
+- **Analytics Dashboard**: Thống kê và báo cáo
+- **Audit Trail**: Theo dõi lịch sử hoạt động
+- **Notifications**: Hệ thống thông báo realtime
 
 ## Tech Stack
 
-- **Backend**: FastAPI (Python)
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Database**: PostgreSQL
-- **Vector Database**: Qdrant
+- **Backend**: FastAPI (Python 3.11+)
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Database**: PostgreSQL với pgvector extension
 - **LLM**: Google Gemini
-- **Storage**: AWS S3 (or local for development)
-- **Cache**: Redis
+- **Storage**: Local filesystem (or AWS S3)
+- **Cache**: Redis (optional)
 
-## Prerequisites
+## Quick Start
 
-- Python 3.11+
-- Node.js 20+
-- Docker & Docker Compose (optional)
-- PostgreSQL 15+
-- Redis 7+
-- Qdrant
-
-## Quick Start with Docker
-
-```bash
-cd mdms
-docker-compose up -d
-```
-
-This will start:
-- Backend API at http://localhost:8000
-- Frontend at http://localhost:3000
-- PostgreSQL at localhost:5432
-- Redis at localhost:6379
-- Qdrant at localhost:6333
-
-## Development Setup
-
-### Backend
+### 1. Backend (port 8002)
 
 ```bash
 cd mdms/backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy environment file
-cp .env.example .env
-# Edit .env with your configuration
-
-# Run migrations (when database is ready)
-# alembic upgrade head
-
-# Start development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+source venv/bin/activate
+uvicorn app.main:app --reload --port 8002
 ```
 
-### Frontend
+### 2. Frontend (port 3000)
 
 ```bash
 cd mdms/frontend
-
-# Install dependencies
-npm install
-
-# Start development server
 npm run dev
 ```
 
-## API Documentation
+### 3. Access
 
-After starting the backend, visit:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- **Frontend**: http://localhost:3000
+- **Backend API Docs**: http://localhost:8002/docs
+- **Login**: `testadmin@mdms.local` / `admin123`
 
-## Key Features
+## Features
 
-### 1. Document Upload & Management
-- Support for PDF, Word (.doc, .docx), Excel (.xls, .xlsx), Markdown
-- Automatic text extraction and indexing
-- Version control
-- Project and category organization
+### Core Features
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Document Upload | Upload PDF, DOCX, MD files | ✅ |
+| Semantic Search | AI-powered search với pgvector | ✅ |
+| Document Generation | Generate SRS, PRD, API docs | ✅ |
+| Projects | Organize documents by project | ✅ |
+| Templates | DOCX templates for export | ✅ |
 
-### 2. Semantic Search
-- Natural language queries in Vietnamese and English
-- AI-powered search using vector embeddings
-- Highlighted results with relevant snippets
-- Filters by project, category, date, file type
+### Advanced Features (New)
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Version Control | Track document versions, compare, restore | ✅ |
+| Approval Workflow | Submit for review, approve/reject | ✅ |
+| Collaboration | Comments, mentions, replies | ✅ |
+| Prompt Manager | CRUD prompt templates, test, versioning | ✅ |
+| Analytics Dashboard | Document stats, storage, activity | ✅ |
+| Notifications | Bell icon, mark read, real-time | ✅ |
+| Audit Trail | Track all user actions, filters | ✅ |
 
-### 3. Document Generation
-- SRS (IEEE 830 standard)
-- PRD (Product Requirements Document)
-- Technical Design Document
-- Test Cases
-- API Documentation
-- Release Notes
-- User Guide
+## API Endpoints
 
-### 4. User Management
-- Role-based access control (Admin, Manager, Member, Viewer)
-- Odoo SSO integration ready
-- Project-based permissions
+### Authentication
+- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/register` - Register
+- `GET /api/v1/auth/me` - Current user
 
-## Configuration
+### Documents
+- `GET /api/v1/documents` - List documents
+- `POST /api/v1/documents` - Upload document
+- `GET /api/v1/documents/{id}` - Get document
+- `GET /api/v1/documents/{id}/versions` - Get versions
+- `POST /api/v1/documents/{id}/versions/{version_id}/restore` - Restore version
 
-### Environment Variables
+### Approval Workflow
+- `POST /api/v1/documents/{id}/submit-for-approval` - Submit for review
+- `POST /api/v1/documents/{id}/approve` - Approve
+- `POST /api/v1/documents/{id}/reject` - Reject
+- `GET /api/v1/documents/pending-approvals` - List pending
 
-```env
-# Application
-APP_NAME=MDMS
-DEBUG=True
-SECRET_KEY=your-secret-key
+### Comments
+- `GET /api/v1/documents/{id}/comments` - List comments
+- `POST /api/v1/documents/{id}/comments` - Add comment
+- `POST /api/v1/comments/{id}/reply` - Reply to comment
 
-# Database
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mdms
+### Prompts
+- `GET /api/v1/prompts` - List prompts
+- `POST /api/v1/prompts` - Create prompt
+- `GET /api/v1/prompts/{id}` - Get prompt
+- `PUT /api/v1/prompts/{id}` - Update prompt
+- `DELETE /api/v1/prompts/{id}` - Delete prompt
+- `GET /api/v1/prompts/{id}/versions` - Get versions
+- `POST /api/v1/prompts/test` - Test prompt
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
+### Analytics
+- `GET /api/v1/analytics/summary` - Dashboard summary
 
-# Qdrant
-QDRANT_HOST=localhost
-QDRANT_PORT=6333
+### Notifications
+- `GET /api/v1/notifications` - List notifications
+- `GET /api/v1/notifications/unread-count` - Unread count
+- `POST /api/v1/notifications/{id}/read` - Mark as read
+- `POST /api/v1/notifications/read-all` - Mark all read
 
-# Google Gemini
-GEMINI_API_KEY=your-api-key
+### Audit
+- `GET /api/v1/audit` - List audit logs
+- `GET /api/v1/audit/summary` - Audit summary
+- `GET /api/v1/audit/my-activity` - My activity
+- `GET /api/v1/audit/actions` - Available actions
 
-# AWS S3 (optional)
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
-S3_BUCKET_NAME=mdms-documents
-```
+## Frontend Pages
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Dashboard | Overview, quick actions, recent docs |
+| `/documents` | Documents | List, upload, manage documents |
+| `/search` | Search | Semantic search |
+| `/generate` | Generate | Generate documents with AI |
+| `/templates` | Templates | Manage DOCX templates |
+| `/projects` | Projects | Manage projects |
+| `/analytics` | Analytics | Charts, stats, storage info |
+| `/prompts` | Prompt Manager | CRUD AI prompts |
+| `/audit` | Audit Trail | Activity logs |
 
 ## Project Structure
 
@@ -143,29 +134,74 @@ S3_BUCKET_NAME=mdms-documents
 mdms/
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/endpoints/   # API routes
-│   │   ├── core/               # Config, security, database
-│   │   ├── models/             # SQLAlchemy models
-│   │   ├── schemas/            # Pydantic schemas
-│   │   ├── services/           # Business logic
-│   │   └── main.py             # FastAPI app
-│   ├── tests/
-│   ├── requirements.txt
-│   └── Dockerfile
+│   │   ├── api/v1/endpoints/
+│   │   │   ├── auth.py
+│   │   │   ├── documents.py
+│   │   │   ├── search.py
+│   │   │   ├── generate.py
+│   │   │   ├── projects.py
+│   │   │   ├── templates.py
+│   │   │   ├── prompts.py          # NEW
+│   │   │   ├── analytics.py        # NEW
+│   │   │   ├── notifications.py    # NEW
+│   │   │   └── audit.py            # NEW
+│   │   ├── models/
+│   │   │   ├── document.py
+│   │   │   ├── user.py
+│   │   │   ├── project.py
+│   │   │   ├── prompt_template.py  # NEW
+│   │   │   ├── notification.py     # NEW
+│   │   │   └── audit.py            # NEW
+│   │   ├── services/
+│   │   │   ├── document_service.py
+│   │   │   ├── search_service.py
+│   │   │   ├── generate_service.py
+│   │   │   ├── prompt_service.py   # NEW
+│   │   │   ├── analytics_service.py # NEW
+│   │   │   ├── notification_service.py # NEW
+│   │   │   └── audit_service.py    # NEW
+│   │   └── schemas/
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── components/         # React components
-│   │   ├── pages/              # Page components
-│   │   ├── services/           # API services
-│   │   ├── hooks/              # Custom hooks
-│   │   └── styles/             # CSS/Tailwind
-│   ├── package.json
-│   └── Dockerfile
-└── docker-compose.yml
+│   │   ├── components/
+│   │   │   ├── Layout.tsx
+│   │   │   └── NotificationBell.tsx # NEW
+│   │   ├── pages/
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Documents.tsx
+│   │   │   ├── Search.tsx
+│   │   │   ├── Generate.tsx
+│   │   │   ├── Analytics.tsx       # NEW
+│   │   │   ├── PromptManager.tsx   # NEW
+│   │   │   └── AuditTrail.tsx      # NEW
+│   │   └── services/
+│   │       └── api.ts              # Updated with new APIs
+│   └── package.json
+└── README.md
+```
+
+## Environment Variables
+
+```env
+# Backend (.env)
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mdms
+GEMINI_API_KEY=your-gemini-api-key
+SECRET_KEY=your-secret-key
+UPLOAD_DIR=./uploads
+
+# Frontend (.env or vite.config.ts)
+VITE_API_URL=/api/v1
+```
+
+## Database
+
+PostgreSQL với pgvector extension cho semantic search:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
 ## License
 
 Internal use only - Magenest
-
-admin@test.com 123456

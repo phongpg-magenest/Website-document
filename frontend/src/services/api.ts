@@ -222,3 +222,144 @@ export const templatesApi = {
     return response.data
   },
 }
+
+// Analytics API
+export const analyticsApi = {
+  getSummary: async () => {
+    const response = await api.get('/analytics/summary')
+    return response.data
+  },
+  getDocumentStats: async (projectId?: string) => {
+    const response = await api.get('/analytics/documents', { params: { project_id: projectId } })
+    return response.data
+  },
+  getActivityStats: async (days = 7) => {
+    const response = await api.get('/analytics/activity', { params: { days } })
+    return response.data
+  },
+  getWorkflowStats: async (days = 30) => {
+    const response = await api.get('/analytics/workflow', { params: { days } })
+    return response.data
+  },
+  getStorageStats: async () => {
+    const response = await api.get('/analytics/storage')
+    return response.data
+  },
+}
+
+// Notifications API
+export const notificationsApi = {
+  list: async (params?: { unread_only?: boolean; skip?: number; limit?: number }) => {
+    const response = await api.get('/notifications', { params })
+    return response.data
+  },
+  getUnreadCount: async () => {
+    const response = await api.get('/notifications/unread-count')
+    return response.data
+  },
+  markAsRead: async (id: string) => {
+    const response = await api.post(`/notifications/${id}/read`)
+    return response.data
+  },
+  markAllAsRead: async () => {
+    const response = await api.post('/notifications/read-all')
+    return response.data
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/notifications/${id}`)
+    return response.data
+  },
+}
+
+// Audit API
+export const auditApi = {
+  list: async (params?: {
+    action?: string
+    user_id?: string
+    resource_type?: string
+    resource_id?: string
+    from_date?: string
+    to_date?: string
+    skip?: number
+    limit?: number
+  }) => {
+    const response = await api.get('/audit', { params })
+    return response.data
+  },
+  getDocumentHistory: async (documentId: string, limit = 100) => {
+    const response = await api.get(`/audit/document/${documentId}`, { params: { limit } })
+    return response.data
+  },
+  getMyActivity: async (days = 30, limit = 50) => {
+    const response = await api.get('/audit/my-activity', { params: { days, limit } })
+    return response.data
+  },
+  getSummary: async (days = 7) => {
+    const response = await api.get('/audit/summary', { params: { days } })
+    return response.data
+  },
+  getActions: async () => {
+    const response = await api.get('/audit/actions')
+    return response.data
+  },
+}
+
+// Prompt Manager API
+export const promptsApi = {
+  list: async (params?: {
+    category?: string
+    is_active?: boolean
+    search?: string
+    skip?: number
+    limit?: number
+  }) => {
+    const response = await api.get('/prompts', { params })
+    return response.data
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/prompts/${id}`)
+    return response.data
+  },
+  create: async (data: {
+    name: string
+    description?: string
+    category: string
+    content: string
+    system_prompt?: string
+    variables?: any[]
+    model_config?: any
+    output_format?: string
+    is_default?: boolean
+  }) => {
+    const response = await api.post('/prompts', data)
+    return response.data
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/prompts/${id}`, data)
+    return response.data
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/prompts/${id}`)
+    return response.data
+  },
+  getCategories: async () => {
+    const response = await api.get('/prompts/categories')
+    return response.data
+  },
+  getVersions: async (id: string) => {
+    const response = await api.get(`/prompts/${id}/versions`)
+    return response.data
+  },
+  restoreVersion: async (templateId: string, versionId: string) => {
+    const response = await api.post(`/prompts/${templateId}/versions/${versionId}/restore`)
+    return response.data
+  },
+  preview: async (content: string, variables: Record<string, string>) => {
+    const response = await api.post('/prompts/preview', { content, variables })
+    return response.data
+  },
+  test: async (data: { template_id?: string; content?: string; variables?: Record<string, string> }) => {
+    const response = await api.post('/prompts/test', data)
+    return response.data
+  },
+}

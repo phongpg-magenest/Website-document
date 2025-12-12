@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
@@ -11,8 +11,9 @@ import {
   DocumentTextIcon,
   CodeBracketIcon,
   GlobeAltIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
-import { generateApi } from '../services/api'
+import { generateApi, promptsApi } from '../services/api'
 
 const EXPORT_FORMATS = [
   { value: 'docx', label: 'Word (.docx)', icon: DocumentTextIcon },
@@ -33,11 +34,33 @@ export default function Generate() {
   const [_selectedFormat, _setSelectedFormat] = useState('docx')
   const [isDownloading, setIsDownloading] = useState(false)
   const [showFormatDropdown, setShowFormatDropdown] = useState(false)
+  const [selectedPrompt, setSelectedPrompt] = useState<any>(null)
+  const [showPromptSelector, setShowPromptSelector] = useState(false)
 
   const { data: templates } = useQuery({
     queryKey: ['generate-templates'],
     queryFn: () => generateApi.getTemplates(),
   })
+
+  // Fetch prompts for document generation
+  const { data: promptsData } = useQuery({
+    queryKey: ['prompts-for-generate'],
+    queryFn: () => promptsApi.list({ category: 'document_generation', is_active: true }),
+  })
+
+  // When document type changes, find matching prompt
+  useEffect(() => {
+    if (selectedType && promptsData?.items) {
+      // Find default prompt for this category or first matching one
+      const matchingPrompts = promptsData.items.filter((p: any) =>
+        p.category === 'document_generation' && p.is_active
+      )
+      const defaultPrompt = matchingPrompts.find((p: any) => p.is_default) || matchingPrompts[0]
+      if (defaultPrompt && !selectedPrompt) {
+        setSelectedPrompt(defaultPrompt)
+      }
+    }
+  }, [selectedType, promptsData])
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -231,18 +254,110 @@ export default function Generate() {
 
           {/* Requirements Input */}
           <div className="card">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              3. Enter Requirements
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                3. Enter Requirements
+              </h3>
+              {/* Prompt Template Selector */}
+              {promptsData?.items && promptsData.items.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowPromptSelector(!showPromptSelector)}
+                    className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    <SparklesIcon className="h-4 w-4" />
+                    {selectedPrompt ? 'Change Prompt Template' : 'Use Prompt Template'}
+                  </button>
+
+                  {showPromptSelector && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 max-h-64 overflow-y-auto">
+                      <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                        Select Prompt Template
+                      </div>
+                      {promptsData.items.map((prompt: any) => (
+                        <button
+                          key={prompt.id}
+                          onClick={() => {
+                            setSelectedPrompt(prompt)
+                            setShowPromptSelector(false)
+                            // Pre-fill with prompt content if textInput is empty
+                            if (!textInput.trim()) {
+                              // Replace variables with placeholders
+                              let content = prompt.content
+                              if (prompt.variables) {
+                                prompt.variables.forEach((v: any) => {
+                                  content = content.replace(
+                                    new RegExp(`\\{\\{${v.name}\\}\\}`, 'g'),
+                                    v.default_value || `[${v.description || v.name}]`
+                                  )
+                                })
+                              }
+                              setTextInput(content)
+                            }
+                            toast.success(`Loaded prompt: ${prompt.name}`)
+                          }}
+                          className={`w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 ${
+                            selectedPrompt?.id === prompt.id ? 'bg-primary-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-900">{prompt.name}</span>
+                            {prompt.is_default && (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          {prompt.description && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{prompt.description}</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <p className="text-sm text-gray-500 mb-3">
               Nhập mô tả yêu cầu hoặc upload file tài liệu tham khảo (hoặc cả hai)
             </p>
 
+            {/* Selected Prompt Info */}
+            {selectedPrompt && (
+              <div className="mb-3 p-3 bg-primary-50 rounded-lg border border-primary-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <SparklesIcon className="h-4 w-4 text-primary-600" />
+                    <span className="text-sm font-medium text-primary-700">
+                      Using: {selectedPrompt.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedPrompt(null)
+                      setTextInput('')
+                    }}
+                    className="text-xs text-primary-600 hover:text-primary-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {selectedPrompt.variables && selectedPrompt.variables.length > 0 && (
+                  <div className="mt-2 text-xs text-primary-600">
+                    Variables: {selectedPrompt.variables.map((v: any) => v.name).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Text Input */}
             <textarea
-              rows={6}
-              className="input mb-4"
-              placeholder="Nhập yêu cầu của bạn tại đây...&#10;&#10;Ví dụ:&#10;- Tên dự án: Hệ thống quản lý kho hàng&#10;- Mục tiêu: Quản lý nhập xuất kho, theo dõi tồn kho&#10;- Người dùng: Nhân viên kho, quản lý&#10;- Tính năng chính: Nhập hàng, xuất hàng, báo cáo tồn kho..."
+              rows={8}
+              className="input mb-4 font-mono text-sm"
+              placeholder={selectedPrompt
+                ? "Edit the prompt template above or fill in the variables..."
+                : "Nhập yêu cầu của bạn tại đây...\n\nVí dụ:\n- Tên dự án: Hệ thống quản lý kho hàng\n- Mục tiêu: Quản lý nhập xuất kho, theo dõi tồn kho\n- Người dùng: Nhân viên kho, quản lý\n- Tính năng chính: Nhập hàng, xuất hàng, báo cáo tồn kho..."}
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
             />

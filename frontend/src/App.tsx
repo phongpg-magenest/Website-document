@@ -9,6 +9,9 @@ import Search from './pages/Search'
 import Generate from './pages/Generate'
 import Projects from './pages/Projects'
 import Templates from './pages/Templates'
+import Analytics from './pages/Analytics'
+import PromptManager from './pages/PromptManager'
+import AuditTrail from './pages/AuditTrail'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, token, fetchUser } = useAuth()
@@ -75,6 +78,30 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Templates />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <Analytics />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/prompts"
+        element={
+          <ProtectedRoute>
+            <PromptManager />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <AuditTrail />
           </ProtectedRoute>
         }
       />

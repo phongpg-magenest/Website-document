@@ -11,8 +11,12 @@ import {
   Bars3Icon,
   ArrowRightOnRectangleIcon,
   RectangleStackIcon,
+  ChartBarIcon,
+  ChatBubbleLeftRightIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../hooks/useAuth'
+import NotificationBell from './NotificationBell'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
@@ -21,6 +25,9 @@ const navigation = [
   { name: 'Generate', href: '/generate', icon: DocumentPlusIcon },
   { name: 'Templates', href: '/templates', icon: RectangleStackIcon },
   { name: 'Projects', href: '/projects', icon: FolderIcon },
+  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+  { name: 'Prompts', href: '/prompts', icon: ChatBubbleLeftRightIcon },
+  { name: 'Audit Trail', href: '/audit', icon: ClockIcon },
 ]
 
 interface LayoutProps {
@@ -154,6 +161,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1"></div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
+              <NotificationBell />
               <div className="flex items-center gap-x-4">
                 <span className="text-sm text-gray-700">{user?.name}</span>
                 <button
