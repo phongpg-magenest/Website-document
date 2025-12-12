@@ -1,17 +1,44 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
 import logging
 
 from app.core.config import settings
 from app.core.database import init_db, AsyncSessionLocal
+from app.core.security import get_password_hash
 from app.api.v1.router import api_router
 from app.services import vector_service
 # Import all models to ensure they are registered with Base
 from app.models import *  # noqa: F401, F403
+from app.models.user import User, UserRole
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+async def create_default_admin():
+    """Create default admin user if not exists"""
+    async with AsyncSessionLocal() as db:
+        # Check if admin exists
+        result = await db.execute(
+            select(User).where(User.email == "admin@mdms.local")
+        )
+        existing_user = result.scalar_one_or_none()
+
+        if not existing_user:
+            admin_user = User(
+                email="admin@mdms.local",
+                name="Admin",
+                hashed_password=get_password_hash("admin123"),
+                role=UserRole.ADMIN,
+                is_active=True,
+            )
+            db.add(admin_user)
+            await db.commit()
+            logger.info("Default admin user created: admin@mdms.local / admin123")
+        else:
+            logger.info("Default admin user already exists")
 
 
 @asynccontextmanager
@@ -33,6 +60,12 @@ async def lifespan(app: FastAPI):
         logger.info("pgvector initialized")
     except Exception as e:
         logger.warning(f"pgvector initialization skipped: {e}")
+
+    # Create default admin user
+    try:
+        await create_default_admin()
+    except Exception as e:
+        logger.warning(f"Default admin creation skipped: {e}")
 
     yield
 
