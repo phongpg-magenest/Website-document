@@ -28,8 +28,21 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = ""  # Custom base URL for proxy (e.g., https://gemini-proxy.izysync.com)
 
-    # Embedding Model
+    # Embedding Model (legacy - không dùng nữa)
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+
+    # Local RAG Services (Vietnamese models)
+    TEI_URL: str = "http://localhost:8080"  # Vietnamese Embedding
+    RERANKER_URL: str = "http://localhost:8081"  # Vietnamese Reranker
+    OLLAMA_URL: str = "http://localhost:11434"  # Local LLM
+    OLLAMA_MODEL: str = "qwen2.5:1.5b-instruct"
+
+    # RAG Settings
+    EMBEDDING_DIMENSION: int = 1024  # AITeamVN/Vietnamese_Embedding dimension
+    RAG_TOP_K_SEARCH: int = 20  # Số chunks lấy từ vector search
+    RAG_TOP_K_RERANK: int = 10  # Số chunks sau rerank để đưa vào LLM
+    RAG_MAX_TOKENS: int = 2048  # Số tokens tối đa cho câu trả lời
+    USE_LOCAL_RAG: bool = True  # True = dùng local models, False = dùng Gemini
 
     # JWT
     JWT_SECRET_KEY: str = "your-jwt-secret-key"

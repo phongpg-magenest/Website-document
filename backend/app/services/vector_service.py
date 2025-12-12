@@ -20,19 +20,33 @@ class VectorService:
             # Enable pgvector extension
             await db.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
-            # Create document_chunks table with vector column
-            await db.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS document_chunks (
-                    id SERIAL PRIMARY KEY,
-                    document_id UUID NOT NULL,
-                    chunk_index INTEGER NOT NULL,
-                    content TEXT NOT NULL,
-                    embedding vector({self.vector_size}),
-                    metadata JSONB DEFAULT '{{}}',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(document_id, chunk_index)
-                )
+            # Check if table exists and get current vector dimension
+            result = await db.execute(text("""
+                SELECT column_name, udt_name
+                FROM information_schema.columns
+                WHERE table_name = 'document_chunks' AND column_name = 'embedding'
             """))
+            existing_col = result.fetchone()
+
+            if existing_col:
+                # Table exists - check if dimension changed
+                # Nếu dimension khác (768 -> 1024), cần recreate table
+                logger.info(f"document_chunks table exists, using vector size {self.vector_size}")
+            else:
+                # Create document_chunks table with vector column
+                await db.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS document_chunks (
+                        id SERIAL PRIMARY KEY,
+                        document_id UUID NOT NULL,
+                        chunk_index INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        embedding vector({self.vector_size}),
+                        metadata JSONB DEFAULT '{{}}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(document_id, chunk_index)
+                    )
+                """))
+                logger.info(f"Created document_chunks table with vector size {self.vector_size}")
 
             # Create index for vector similarity search
             await db.execute(text("""
@@ -64,25 +78,37 @@ class VectorService:
         metadata: Dict[str, Any],
     ) -> bool:
         """Index document chunks into pgvector"""
+        import json
         try:
             embeddings = self.get_embeddings_batch(chunks)
 
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 embedding_str = f"[{','.join(map(str, embedding))}]"
+                metadata_json = json.dumps(metadata)
 
+                # Use raw SQL with asyncpg-compatible format
                 await db.execute(
                     text("""
                         INSERT INTO document_chunks (document_id, chunk_index, content, embedding, metadata)
-                        VALUES (:doc_id, :idx, :content, :embedding::vector, :metadata::jsonb)
+                        VALUES (
+                            CAST(:doc_id AS UUID),
+                            :idx,
+                            :content,
+                            CAST(:embedding AS vector),
+                            CAST(:metadata AS jsonb)
+                        )
                         ON CONFLICT (document_id, chunk_index)
-                        DO UPDATE SET content = :content, embedding = :embedding::vector, metadata = :metadata::jsonb
+                        DO UPDATE SET
+                            content = EXCLUDED.content,
+                            embedding = EXCLUDED.embedding,
+                            metadata = EXCLUDED.metadata
                     """),
                     {
                         "doc_id": str(document_id),
                         "idx": i,
                         "content": chunk,
                         "embedding": embedding_str,
-                        "metadata": str(metadata).replace("'", '"'),
+                        "metadata": metadata_json,
                     }
                 )
 
@@ -132,10 +158,10 @@ class VectorService:
                         chunk_index,
                         content,
                         metadata,
-                        1 - (embedding <=> :embedding::vector) as score
+                        1 - (embedding <=> CAST(:embedding AS vector)) as score
                     FROM document_chunks
                     {filter_sql}
-                    ORDER BY embedding <=> :embedding::vector
+                    ORDER BY embedding <=> CAST(:embedding AS vector)
                     LIMIT :top_k
                 """),
                 params

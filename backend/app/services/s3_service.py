@@ -1,24 +1,28 @@
-import boto3
-from botocore.exceptions import ClientError
+"""
+Storage Service - Lưu file local thay vì AWS S3
+"""
+import os
+from pathlib import Path
 from typing import Optional
 from uuid import UUID
 import logging
-from io import BytesIO
+import aiofiles
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Thư mục lưu file local
+UPLOAD_DIR = Path("/app/uploads")
+
 
 class S3Service:
+    """Local file storage (thay thế S3)"""
+
     def __init__(self):
-        self.s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_REGION,
-        )
-        self.bucket_name = settings.S3_BUCKET_NAME
+        # Tạo thư mục uploads nếu chưa có
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info(f"StorageService: Using LOCAL storage at {UPLOAD_DIR}")
 
     async def upload_file(
         self,
@@ -26,47 +30,49 @@ class S3Service:
         file_key: str,
         content_type: Optional[str] = None,
     ) -> bool:
-        """Upload file to S3"""
+        """Upload file to local storage"""
         try:
-            extra_args = {}
-            if content_type:
-                extra_args["ContentType"] = content_type
+            file_path = UPLOAD_DIR / file_key
+            file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            self.s3_client.upload_fileobj(
-                BytesIO(file_content),
-                self.bucket_name,
-                file_key,
-                ExtraArgs=extra_args if extra_args else None,
-            )
-            logger.info(f"Uploaded file to S3: {file_key}")
+            async with aiofiles.open(file_path, 'wb') as f:
+                await f.write(file_content)
+
+            logger.info(f"Uploaded file to local: {file_key}")
             return True
-        except ClientError as e:
-            logger.error(f"Error uploading to S3: {e}")
+        except Exception as e:
+            logger.error(f"Error uploading file: {e}")
             return False
 
     async def download_file(self, file_key: str) -> Optional[bytes]:
-        """Download file from S3"""
+        """Download file from local storage"""
         try:
-            response = self.s3_client.get_object(
-                Bucket=self.bucket_name,
-                Key=file_key,
-            )
-            return response["Body"].read()
-        except ClientError as e:
-            logger.error(f"Error downloading from S3: {e}")
+            file_path = UPLOAD_DIR / file_key
+            if not file_path.exists():
+                logger.error(f"File not found: {file_key}")
+                return None
+
+            async with aiofiles.open(file_path, 'rb') as f:
+                return await f.read()
+        except Exception as e:
+            logger.error(f"Error downloading file: {e}")
             return None
 
     async def delete_file(self, file_key: str) -> bool:
-        """Delete file from S3"""
+        """Delete file from local storage"""
         try:
-            self.s3_client.delete_object(
-                Bucket=self.bucket_name,
-                Key=file_key,
-            )
-            logger.info(f"Deleted file from S3: {file_key}")
+            file_path = UPLOAD_DIR / file_key
+            if file_path.exists():
+                os.remove(file_path)
+                # Xóa thư mục rỗng
+                try:
+                    file_path.parent.rmdir()
+                except OSError:
+                    pass  # Thư mục không rỗng, bỏ qua
+            logger.info(f"Deleted file: {file_key}")
             return True
-        except ClientError as e:
-            logger.error(f"Error deleting from S3: {e}")
+        except Exception as e:
+            logger.error(f"Error deleting file: {e}")
             return False
 
     async def get_presigned_url(
@@ -75,27 +81,16 @@ class S3Service:
         expiration: int = 3600,
         download: bool = False,
     ) -> Optional[str]:
-        """Generate presigned URL for file access"""
+        """Generate URL for file access (local endpoint)"""
         try:
-            params = {
-                "Bucket": self.bucket_name,
-                "Key": file_key,
-            }
-            if download:
-                params["ResponseContentDisposition"] = "attachment"
-
-            url = self.s3_client.generate_presigned_url(
-                "get_object",
-                Params=params,
-                ExpiresIn=expiration,
-            )
-            return url
-        except ClientError as e:
-            logger.error(f"Error generating presigned URL: {e}")
+            # Trả về URL tới API download
+            return f"/api/v1/documents/download/{file_key}"
+        except Exception as e:
+            logger.error(f"Error generating URL: {e}")
             return None
 
     def generate_file_key(self, document_id: UUID, filename: str) -> str:
-        """Generate S3 key for document"""
+        """Generate key for document"""
         return f"documents/{document_id}/{filename}"
 
     def generate_version_key(
@@ -104,7 +99,7 @@ class S3Service:
         version: str,
         filename: str,
     ) -> str:
-        """Generate S3 key for document version"""
+        """Generate key for document version"""
         return f"documents/{document_id}/versions/{version}/{filename}"
 
 

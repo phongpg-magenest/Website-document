@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class DocumentProcessingService:
     def __init__(self):
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
-        self.chunk_size = 500  # tokens
-        self.chunk_overlap = 100  # tokens
+        self.chunk_size = 1000  # tokens - tăng để mỗi chunk có nhiều context hơn
+        self.chunk_overlap = 200  # tokens - tăng overlap để không bỏ sót thông tin
 
     def extract_text(self, file_content: bytes, file_type: FileType) -> str:
         """Extract text from different file formats"""

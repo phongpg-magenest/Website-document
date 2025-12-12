@@ -17,6 +17,9 @@ class SearchQuery(BaseModel):
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
     top_k: int = Field(default=10, ge=1, le=100)
+    # RAG options
+    use_rerank: bool = Field(default=True, description="Sử dụng Reranker để cải thiện kết quả")
+    generate_answer: bool = Field(default=False, description="Sinh câu trả lời từ LLM")
 
 
 class SearchResult(BaseModel):
@@ -25,6 +28,7 @@ class SearchResult(BaseModel):
     snippet: str
     highlights: List[str]
     score: float
+    rerank_score: Optional[float] = None  # Score từ Reranker
     file_type: FileType
     owner_name: str
     project_name: Optional[str]
@@ -37,6 +41,9 @@ class SearchResponse(BaseModel):
     results: List[SearchResult]
     total: int
     processing_time_ms: float
+    # RAG response
+    answer: Optional[str] = None  # Câu trả lời từ LLM
+    used_rerank: bool = False  # Có dùng Reranker không
 
 
 class SearchSuggestion(BaseModel):
